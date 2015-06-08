@@ -1,26 +1,36 @@
 #! /bin/bash
+### BEGIN INIT INFO
+# Provides: csgo-server-launcher
+# Required-Start: $remote_fs $syslog
+# Required-Stop: $remote_fs $syslog
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: Counter-Strike - Global Offensive Server Launcher
+### END INIT INFO
 
 ##################################################################################
 #                                                                                #
-#  Counter-Strike : Global Offensive Server Launcher                             #
+#  Counter-Strike : Global Offensive Server Launcher v1.9                        #
 #                                                                                #
-#  Author: Cr@zy                                                                 #
-#  Contact: http://www.crazyws.fr                                                #
+#  A simple script to launch your Counter-Strike : Global Offensive              #
+#  Dedicated Server.                                                             #
+#                                                                                #
+#  Copyright (C) 2013-2015 Cr@zy <webmaster@crazyws.fr>                          #
+#                                                                                #
+#  Counter-Strike : Global Offensive Server Launcher is free software; you can   #
+#  redistribute it and/or modify it under the terms of the GNU Lesser General    #
+#  Public License as published by the Free Software Foundation, either version 3 #
+#  of the License, or (at your option) any later version.                        #
+#                                                                                #
+#  Counter-Strike : Global Offensive Server Launcher is distributed in the hope  #
+#  that it will be useful, but WITHOUT ANY WARRANTY; without even the implied    #
+#  warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the      #
+#  GNU Lesser General Public License for more details.                           #
+#                                                                                #
+#  You should have received a copy of the GNU Lesser General Public License      #
+#  along with this program. If not, see http://www.gnu.org/licenses/.            #
+#                                                                                #
 #  Related post: http://goo.gl/HFFGy                                             #
-#                                                                                #
-#  This program is free software: you can redistribute it and/or modify it       #
-#  under the terms of the GNU General Public License as published by the Free    #
-#  Software Foundation, either version 3 of the License, or (at your option)     #
-#  any later version.                                                            #
-#                                                                                #
-#  This program is distributed in the hope that it will be useful, but WITHOUT   #
-#  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS #
-#  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more         #
-#  details.                                                                      #
-#                                                                                #
-#  You should have received a copy of the GNU General Public License along       #
-#  with this program.  If not, see http://www.gnu.org/licenses/.                 #
-#                                                                                #
 #  Usage: ./csgo-server-launcher.sh {start|stop|status|restart|console|update}   #
 #    - start: start the server                                                   #
 #    - stop: stop the server                                                     #
@@ -29,106 +39,11 @@
 #    - console: display the server console where you can enter commands.         #
 #     To exit the console without stopping the server, press CTRL + A then D.    #
 #    - update: update the server                                                 #
+#    - create: creates a new server                                              #
 #                                                                                #
 ##################################################################################
 
-SCREEN_NAME="csgo"
-USER="csgo"
-#IP="192.168.0.103"
-PUBIP="84.197.182.51"
-IP="00.00.00.00"
-MAXPLAYERS="18"
-TICKRATE="64"
-SVLAN="0"
-PORT="27015"
-#GAME_MODE="Casual"
-#GAME_MODE="Competitive"
-#GAME_MODE="Deathmatch"
-#GAME_MODE="Breakout"
-#GAME_MODE="Arms"
-GAME_MODE="Bloodhound"
-
-case "$GAME_MODE" in
-  Casual)
-      # Classic Casual:
-      # srcds -game csgo -console -usercon +game_type 0 +game_mode 0 +mapgroup mg_bomb +map de_dust
-      GAME_TYPE="0"
-      GAME_MODE="0"
-      MAPGROUP="mg_active"
-      MAP="de_dust";;
-      #MAP="ba_jail_electric_csgo_r3";;
-  Breakout)
-      # Classic Casual:
-      # srcds -game csgo -console -usercon +game_type 0 +game_mode 0 +mapgroup mg_bomb +map de_dust
-      GAME_TYPE="0"
-      GAME_MODE="0"
-      MAPGROUP="mg_op_breakout"
-      MAP="de_castle";;
-  Bloodhound)
-      GAME_TYPE="0"
-      GAME_MODE="0"
-      MAPGROUP="mg_op_bloodhound"	  
-      MAP="cs_agency";;
-  Competitive)
-      # Classic Competitive:
-      # srcds -game csgo -console -usercon +game_type 0 +game_mode 1 +mapgroup mg_bomb_se +map de_dust2_se
-      GAME_TYPE="0"
-      GAME_MODE="1"
-      MAPGROUP="mg_hostage"
-      MAP="cs_office";; 
-  Arms)
-      # Arms Race:
-      # srcds -game csgo -console -usercon +game_type 1 +game_mode 0 +mapgroup mg_armsrace +map ar_shoots
-      GAME_TYPE="1"
-      GAME_MODE="0"
-      MAPGROUP="mg_armsrace"
-      MAP="ar_shoots";;
-  Demolition)
-      # Demolition:
-      # srcds -game csgo -console -usercon +game_type 1 +game_mode 1 +mapgroup mg_demolition +map de_lake
-      GAME_TYPE="1"
-      GAME_MODE="1"
-      MAPGROUP="mg_demolition"
-      MAP="de_lake";;
-  Deathmatch)
-      # Deathmatch:
-      # srcds -game csgo -console -usercon +game_type 1 +game_mode 2 +mapgroup mg_allclassic +map de_dust
-      GAME_TYPE="1"
-      GAME_MODE="2"
-      MAPGROUP="mg_reserves"
-      MAP="de_dust";;
-      *)
-echo "Error : wrong game_mode"
-exit 1
-;;
-esac
-
-DIR_STEAMCMD="/home/csgo"
-STEAM_LOGIN="anonymous"
-STEAM_PASSWORD=""
-STEAM_RUNSCRIPT="$DIR_STEAMCMD/runscript_$SCREEN_NAME"
-
-DIR_ROOT="/csgo"
-DIR_GAME="$DIR_ROOT/cogs"
-DIR_LOGS="$DIR_GAME/logs"
-DAEMON_GAME="srcds_run"
-
-UPDATE_LOG="$DIR_LOGS/update_`date +%Y%m%d`.log"
-UPDATE_EMAIL="ronny.delafaille@gmail.com"
-UPDATE_RETRY=3
-
-# Workshop : https://developer.valvesoftware.com/wiki/CSGO_Workshop_For_Server_Operators
-API_AUTHORIZATION_KEY="" # http://steamcommunity.com/dev/registerkey
-WORKSHOP_COLLECTION_ID="125499818" # http://steamcommunity.com/sharedfiles/filedetails/?id=125499818
-WORKSHOP_START_MAP="125488374" # http://steamcommunity.com/sharedfiles/filedetails/?id=125488374
-
-# PARAM_START="-game csgo -console -usercon -secure -autoupdate -steam_dir ${DIR_STEAMCMD} -steamcmd_script ${STEAM_RUNSCRIPT} -nohltv -maxplayers_override ${MAXPLAYERS} -tickrate ${TICKRATE} +sv_pure 0 +game_type 0 +game_mode 0 +mapgroup mg_bomb +map de_dust2 +sv_lan ${SVLAN} +ip ${IP} +hostport ${PORT} +net_public_adr ${PUBIP}"
-PARAM_START="-game csgo -console -usercon -secure -autoupdate -steam_dir ${DIR_STEAMCMD} -steamcmd_script ${STEAM_RUNSCRIPT} -nohltv -maxplayers_override ${MAXPLAYERS} -tickrate ${TICKRATE} +sv_pure 0 +game_type ${GAME_TYPE} +game_mode ${GAME_MODE} +mapgroup ${MAPGROUP} +map ${MAP} +sv_lan ${SVLAN} +ip ${IP} +hostport ${PORT} +net_public_adr ${PUBIP} -condebug"
-
-PARAM_UPDATE="+login ${STEAM_LOGIN} ${STEAM_PASSWORD} +force_install_dir ${DIR_ROOT} +app_update 740 validate +quit"
-
-# Do not change this path
-PATH=/bin:/usr/bin:/sbin:/usr/sbin
+CONFIG_FILE="/etc/csgo-server-launcher/csgo-server-launcher.conf"
 
 # No edits necessary beyond this line
 if [ ! -x `which awk` ]; then echo "ERROR: You need awk for this script (try apt-get install awk)"; exit 1; fi
