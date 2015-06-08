@@ -1,36 +1,26 @@
 #! /bin/bash
-### BEGIN INIT INFO
-# Provides: csgo-server-launcher
-# Required-Start: $remote_fs $syslog
-# Required-Stop: $remote_fs $syslog
-# Default-Start: 2 3 4 5
-# Default-Stop: 0 1 6
-# Short-Description: Counter-Strike - Global Offensive Server Launcher
-### END INIT INFO
 
 ##################################################################################
 #                                                                                #
-#  Counter-Strike : Global Offensive Server Launcher v1.9                        #
+#  Counter-Strike : Global Offensive Server Launcher                             #
 #                                                                                #
-#  A simple script to launch your Counter-Strike : Global Offensive              #
-#  Dedicated Server.                                                             #
-#                                                                                #
-#  Copyright (C) 2013-2015 Cr@zy <webmaster@crazyws.fr>                          #
-#                                                                                #
-#  Counter-Strike : Global Offensive Server Launcher is free software; you can   #
-#  redistribute it and/or modify it under the terms of the GNU Lesser General    #
-#  Public License as published by the Free Software Foundation, either version 3 #
-#  of the License, or (at your option) any later version.                        #
-#                                                                                #
-#  Counter-Strike : Global Offensive Server Launcher is distributed in the hope  #
-#  that it will be useful, but WITHOUT ANY WARRANTY; without even the implied    #
-#  warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the      #
-#  GNU Lesser General Public License for more details.                           #
-#                                                                                #
-#  You should have received a copy of the GNU Lesser General Public License      #
-#  along with this program. If not, see http://www.gnu.org/licenses/.            #
-#                                                                                #
+#  Author: Cr@zy                                                                 #
+#  Contact: http://www.crazyws.fr                                                #
 #  Related post: http://goo.gl/HFFGy                                             #
+#                                                                                #
+#  This program is free software: you can redistribute it and/or modify it       #
+#  under the terms of the GNU General Public License as published by the Free    #
+#  Software Foundation, either version 3 of the License, or (at your option)     #
+#  any later version.                                                            #
+#                                                                                #
+#  This program is distributed in the hope that it will be useful, but WITHOUT   #
+#  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS #
+#  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more         #
+#  details.                                                                      #
+#                                                                                #
+#  You should have received a copy of the GNU General Public License along       #
+#  with this program.  If not, see http://www.gnu.org/licenses/.                 #
+#                                                                                #
 #  Usage: ./csgo-server-launcher.sh {start|stop|status|restart|console|update}   #
 #    - start: start the server                                                   #
 #    - stop: stop the server                                                     #
@@ -39,13 +29,110 @@
 #    - console: display the server console where you can enter commands.         #
 #     To exit the console without stopping the server, press CTRL + A then D.    #
 #    - update: update the server                                                 #
-#    - create: creates a new server                                              #
 #                                                                                #
 ##################################################################################
 
-CONFIG_FILE="/etc/csgo-server-launcher/csgo-server-launcher.conf"
+SCREEN_NAME="csgo"
+USER="csgo"
+#IP="192.168.0.103"
+PUBIP="84.197.182.51"
+IP="00.00.00.00"
+MAXPLAYERS="18"
+TICKRATE="64"
+SVLAN="0"
+PORT="27015"
+#GAME_MODE="Casual"
+#GAME_MODE="Competitive"
+#GAME_MODE="Deathmatch"
+#GAME_MODE="Breakout"
+#GAME_MODE="Arms"
+GAME_MODE="Bloodhound"
+
+case "$GAME_MODE" in
+  Casual)
+      # Classic Casual:
+      # srcds -game csgo -console -usercon +game_type 0 +game_mode 0 +mapgroup mg_bomb +map de_dust
+      GAME_TYPE="0"
+      GAME_MODE="0"
+      MAPGROUP="mg_active"
+      MAP="de_dust";;
+      #MAP="ba_jail_electric_csgo_r3";;
+  Breakout)
+      # Classic Casual:
+      # srcds -game csgo -console -usercon +game_type 0 +game_mode 0 +mapgroup mg_bomb +map de_dust
+      GAME_TYPE="0"
+      GAME_MODE="0"
+      MAPGROUP="mg_op_breakout"
+      MAP="de_castle";;
+  Bloodhound)
+      GAME_TYPE="0"
+      GAME_MODE="0"
+      MAPGROUP="mg_op_bloodhound"	  
+      MAP="cs_agency";;
+  Competitive)
+      # Classic Competitive:
+      # srcds -game csgo -console -usercon +game_type 0 +game_mode 1 +mapgroup mg_bomb_se +map de_dust2_se
+      GAME_TYPE="0"
+      GAME_MODE="1"
+      MAPGROUP="mg_hostage"
+      MAP="cs_office";; 
+  Arms)
+      # Arms Race:
+      # srcds -game csgo -console -usercon +game_type 1 +game_mode 0 +mapgroup mg_armsrace +map ar_shoots
+      GAME_TYPE="1"
+      GAME_MODE="0"
+      MAPGROUP="mg_armsrace"
+      MAP="ar_shoots";;
+  Demolition)
+      # Demolition:
+      # srcds -game csgo -console -usercon +game_type 1 +game_mode 1 +mapgroup mg_demolition +map de_lake
+      GAME_TYPE="1"
+      GAME_MODE="1"
+      MAPGROUP="mg_demolition"
+      MAP="de_lake";;
+  Deathmatch)
+      # Deathmatch:
+      # srcds -game csgo -console -usercon +game_type 1 +game_mode 2 +mapgroup mg_allclassic +map de_dust
+      GAME_TYPE="1"
+      GAME_MODE="2"
+      MAPGROUP="mg_reserves"
+      MAP="de_dust";;
+      *)
+echo "Error : wrong game_mode"
+exit 1
+;;
+esac
+
+DIR_STEAMCMD="/home/csgo"
+STEAM_LOGIN="anonymous"
+STEAM_PASSWORD=""
+STEAM_RUNSCRIPT="$DIR_STEAMCMD/runscript_$SCREEN_NAME"
+
+DIR_ROOT="/csgo"
+DIR_GAME="$DIR_ROOT/cogs"
+DIR_LOGS="$DIR_GAME/logs"
+DAEMON_GAME="srcds_run"
+
+UPDATE_LOG="$DIR_LOGS/update_`date +%Y%m%d`.log"
+UPDATE_EMAIL="ronny.delafaille@gmail.com"
+UPDATE_RETRY=3
+
+# Workshop : https://developer.valvesoftware.com/wiki/CSGO_Workshop_For_Server_Operators
+API_AUTHORIZATION_KEY="" # http://steamcommunity.com/dev/registerkey
+WORKSHOP_COLLECTION_ID="125499818" # http://steamcommunity.com/sharedfiles/filedetails/?id=125499818
+WORKSHOP_START_MAP="125488374" # http://steamcommunity.com/sharedfiles/filedetails/?id=125488374
+
+# PARAM_START="-game csgo -console -usercon -secure -autoupdate -steam_dir ${DIR_STEAMCMD} -steamcmd_script ${STEAM_RUNSCRIPT} -nohltv -maxplayers_override ${MAXPLAYERS} -tickrate ${TICKRATE} +sv_pure 0 +game_type 0 +game_mode 0 +mapgroup mg_bomb +map de_dust2 +sv_lan ${SVLAN} +ip ${IP} +hostport ${PORT} +net_public_adr ${PUBIP}"
+PARAM_START="-game csgo -console -usercon -secure -autoupdate -steam_dir ${DIR_STEAMCMD} -steamcmd_script ${STEAM_RUNSCRIPT} -nohltv -maxplayers_override ${MAXPLAYERS} -tickrate ${TICKRATE} +sv_pure 0 +game_type ${GAME_TYPE} +game_mode ${GAME_MODE} +mapgroup ${MAPGROUP} +map ${MAP} +sv_lan ${SVLAN} +ip ${IP} +hostport ${PORT} +net_public_adr ${PUBIP} -condebug"
+
+PARAM_UPDATE="+login ${STEAM_LOGIN} ${STEAM_PASSWORD} +force_install_dir ${DIR_ROOT} +app_update 740 validate +quit"
+
+# Do not change this path
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
 
 # No edits necessary beyond this line
+if [ ! -x `which awk` ]; then echo "ERROR: You need awk for this script (try apt-get install awk)"; exit 1; fi
+if [ ! -x `which screen` ]; then echo "ERROR: You need screen for this script (try apt-get install screen)"; exit 1; fi
 
 function start {
   if [ ! -d $DIR_ROOT ]; then echo "ERROR: $DIR_ROOT is not a directory"; exit 1; fi
@@ -119,42 +206,7 @@ function console {
 }
 
 function update {
-  # Create the log directory
-  if [ ! -d $DIR_LOGS ];
-  then 
-    echo "$DIR_LOGS does not exist, creating..."
-    if [ `whoami` = root ]
-    then
-      su - $USER -c "mkdir -p $DIR_LOGS";
-    else
-      mkdir -p "$DIR_LOGS"
-    fi
-  fi
-
-  if [ ! -d $DIR_LOGS ]
-  then
-    echo "ERROR: Could not create $DIR_LOGS"
-    exit 1
-  fi
-
-  # Create the game root
-  if [ ! -d $DIR_ROOT ]
-  then
-    echo "$DIR_ROOT does not exist, creating..."
-    if [ `whoami` = root ]
-    then
-      su - $USER -c "mkdir -p $DIR_ROOT";
-    else
-      mkdir -p "$DIR_ROOT"
-    fi
-  fi
-
-  if [ ! -d $DIR_ROOT ]
-  then
-    echo "ERROR: Could not create $DIR_ROOT"
-    exit 1
-  fi
-  
+  if [ ! -d $DIR_LOGS ]; then mkdir $DIR_LOGS; fi
   if [ -z "$1" ]; then retry=0; else retry=$1; fi
   
   if [ -z "$2" ]
@@ -172,7 +224,7 @@ function update {
     relaunch=$2
   fi
   
-  # Save motd.txt before update
+  # save motd.txt before update
   if [ -f "$DIR_GAME/motd.txt" ]; then cp $DIR_GAME/motd.txt $DIR_GAME/motd.txt.bck; fi
   
   echo "Starting the $SCREEN_NAME update..."
@@ -185,10 +237,10 @@ function update {
     ./steamcmd.sh $PARAM_UPDATE 2>&1 | tee $UPDATE_LOG
   fi
   
-  # Restore motd.txt
+  # restore motd.txt
   if [ -f "$DIR_GAME/motd.txt.bck" ]; then mv $DIR_GAME/motd.txt.bck $DIR_GAME/motd.txt; fi
 
-  # Check for update
+  # check for update
   if [ `egrep -ic "Success! App '740' fully installed." "$UPDATE_LOG"` -gt 0 ] || [ `egrep -ic "Success! App '740' already up to date" "$UPDATE_LOG"` -gt 0 ]
   then
     echo "$SCREEN_NAME updated successfully"
@@ -204,7 +256,7 @@ function update {
     fi
   fi
   
-  # Send e-mail
+  # send e-mail
   if [ ! -z "$UPDATE_EMAIL" ]; then cat $UPDATE_LOG | mail -s "$SCREEN_NAME update for $(hostname -f)" $UPDATE_EMAIL; fi
   
   if [ $relaunch = 1 ]
@@ -218,109 +270,10 @@ function update {
   fi
 }
 
-function create {
-  # IP should never exist: RFC 5735 TEST-NET-2
-  if [ "$IP" = "198.51.100.0" ]
-  then
-    echo "ERROR: You must configure the script before you create a server."
-    exit 1
-  fi
-  
-  # If steamcmd already exists just install the server
-  if [ -e "$DIR_STEAMCMD/steamcmd.sh" ]
-  then
-    echo "steamcmd already exists..."
-    echo "Installing/Updating $SCREEN_NAME"
-    update
-    return
-  fi
-  
-  # Install steamcmd in the specified directory 
-  if [ ! -d "$DIR_STEAMCMD" ]
-  then
-    echo "$DIR_STEAMCMD does not exist, creating..."
-    if [ `whoami` = "root" ]
-    then
-      su - $USER -c "mkdir -p $DIR_STEAMCMD"
-    else
-      mkdir -p $DIR_STEAMCMD
-    fi
-    if [ ! -d "$DIR_STEAMCMD" ]
-    then
-      echo "ERROR: Could not create $DIR_STEAMCMD"
-      exit 1
-    fi
-  fi 
-
-  # Download steamcmd
-  echo "Downloading steamcmd from http://media.steampowered.com/client/steamcmd_linux.tar.gz"
-  if [ `whoami` = "root" ]
-  then
-    su - $USER -c "cd $DIR_STEAMCMD ; wget http://media.steampowered.com/client/steamcmd_linux.tar.gz"
-  else
-    cd $DIR_STEAMCMD ; wget http://media.steampowered.com/client/steamcmd_linux.tar.gz
-  fi
-  if [ "$?" -ne "0" ]
-  then
-    echo "ERROR: Unable to download steamcmd"
-    exit 1
-  fi
-  
-  # Extract it
-  echo "Extracting and removing the archive"
-  if [ `whoami` = "root" ]
-  then
-    su - $USER -c "cd $DIR_STEAMCMD ; tar xzvf ./steamcmd_linux.tar.gz"
-    su - $USER -c "cd $DIR_STEAMCMD ; rm ./steamcmd_linux.tar.gz"
-  else
-    cd $DIR_STEAMCMD ; tar xzvf ./steamcmd_linux.tar.gz
-    cd $DIR_STEAMCMD ; rm ./steamcmd_linux.tar.gz
-  fi
-  
-  # Did it install?
-  if [ ! -e "$DIR_STEAMCMD/steamcmd.sh" ]
-  then
-    echo "ERROR: Failed to install steamcmd"
-    exit 1
-  fi
-  
-  # Run steamcmd for the first time to update it, telling it to quit when it is done
-  echo "Updating steamcmd"
-  if [ `whoami` = "root" ]
-  then
-  su - $USER -c "echo quit | $DIR_STEAMCMD/steamcmd.sh"
-  else
-    echo quit | $DIR_STEAMCMD/steamcmd.sh
-  fi
-  
-  # Done installing steamcmd, install the server
-  echo "Done installing steamcmd. Installing the game"
-  echo "This will take a while"
-  update
-}
-
 function usage {
-  echo "Usage: service csgo-server-launcher {start|stop|status|restart|console|update|create}"
+  echo "Usage: $0 {start|stop|status|restart|console|update}"
   echo "On console, press CTRL+A then D to stop the screen without stopping the server."
 }
-
-### BEGIN ###
-
-# Read config file
-if [ ! -f "$CONFIG_FILE" ]
-then
-  echo "ERROR: Config file $CONFIG_FILE not found..."
-  exit 1
-else
-  source "$CONFIG_FILE"
-fi
-
-# Check required packages
-PATH=/bin:/usr/bin:/sbin:/usr/sbin
-if [ ! -x `which awk` ]; then echo "ERROR: You need awk for this script (try apt-get install awk)"; exit 1; fi
-if [ ! -x `which screen` ]; then echo "ERROR: You need screen for this script (try apt-get install screen)"; exit 1; fi
-if [ ! -x `which wget` ]; then echo "ERROR: You need wget for this script (try apt-get install wget)"; exit 1; fi
-if [ ! -x `which tar` ]; then echo "ERROR: You need tar for this script (try apt-get install tar)"; exit 1; fi
 
 case "$1" in
 
@@ -363,11 +316,6 @@ case "$1" in
     echo "Updating $SCREEN_NAME..."
     update
   ;;
-  
-  create)
-    echo "Creating $SCREEN_NAME..."
-    create
-  ;;
 
   *)
     usage
@@ -377,4 +325,5 @@ case "$1" in
 esac
 
 exit 0
+
 
