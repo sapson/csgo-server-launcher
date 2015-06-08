@@ -18,12 +18,9 @@ Required commands :
 
 Execute the following commands to download the script :
 ```console
-$ cd /etc/init.d/
-$ wget https://raw.githubusercontent.com/crazy-max/csgo-server-launcher/master/csgo-server-launcher.sh -O csgo-server-launcher --no-check-certificate
-$ chmod +x csgo-server-launcher
-$ update-rc.d csgo-server-launcher defaults
-$ mkdir /etc/csgo-server-launcher/
-$ wget https://raw.githubusercontent.com/crazy-max/csgo-server-launcher/master/csgo-server-launcher.conf -O /etc/csgo-server-launcher/csgo-server-launcher.conf --no-check-certificate
+$ wget https://raw.githubusercontent.com/sapson/csgo-server-launcher/master/csgo-server-launcher.conf
+$ wget https://raw.githubusercontent.com/sapson/csgo-server-launcher/master/csgo-server-launcher.sh
+$ chmod +x csgo-server-launcher.sh
 ```
 
 Before running the script, you must change some vars in the config file ``/etc/csgo-server-launcher/csgo-server-launcher.conf``.
