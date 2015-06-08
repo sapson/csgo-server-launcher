@@ -43,11 +43,9 @@
 #                                                                                #
 ##################################################################################
 
-CONFIG_FILE="/etc/csgo-server-launcher/csgo-server-launcher.conf"
+CONFIG_FILE="csgo-server-launcher.conf"
 
 # No edits necessary beyond this line
-if [ ! -x `which awk` ]; then echo "ERROR: You need awk for this script (try apt-get install awk)"; exit 1; fi
-if [ ! -x `which screen` ]; then echo "ERROR: You need screen for this script (try apt-get install screen)"; exit 1; fi
 
 function start {
   if [ ! -d $DIR_ROOT ]; then echo "ERROR: $DIR_ROOT is not a directory"; exit 1; fi
@@ -121,7 +119,42 @@ function console {
 }
 
 function update {
-  if [ ! -d $DIR_LOGS ]; then mkdir $DIR_LOGS; fi
+  # Create the log directory
+  if [ ! -d $DIR_LOGS ];
+  then 
+    echo "$DIR_LOGS does not exist, creating..."
+    if [ `whoami` = root ]
+    then
+      su - $USER -c "mkdir -p $DIR_LOGS";
+    else
+      mkdir -p "$DIR_LOGS"
+    fi
+  fi
+
+  if [ ! -d $DIR_LOGS ]
+  then
+    echo "ERROR: Could not create $DIR_LOGS"
+    exit 1
+  fi
+
+  # Create the game root
+  if [ ! -d $DIR_ROOT ]
+  then
+    echo "$DIR_ROOT does not exist, creating..."
+    if [ `whoami` = root ]
+    then
+      su - $USER -c "mkdir -p $DIR_ROOT";
+    else
+      mkdir -p "$DIR_ROOT"
+    fi
+  fi
+
+  if [ ! -d $DIR_ROOT ]
+  then
+    echo "ERROR: Could not create $DIR_ROOT"
+    exit 1
+  fi
+  
   if [ -z "$1" ]; then retry=0; else retry=$1; fi
   
   if [ -z "$2" ]
@@ -139,7 +172,7 @@ function update {
     relaunch=$2
   fi
   
-  # save motd.txt before update
+  # Save motd.txt before update
   if [ -f "$DIR_GAME/motd.txt" ]; then cp $DIR_GAME/motd.txt $DIR_GAME/motd.txt.bck; fi
   
   echo "Starting the $SCREEN_NAME update..."
@@ -152,10 +185,10 @@ function update {
     ./steamcmd.sh $PARAM_UPDATE 2>&1 | tee $UPDATE_LOG
   fi
   
-  # restore motd.txt
+  # Restore motd.txt
   if [ -f "$DIR_GAME/motd.txt.bck" ]; then mv $DIR_GAME/motd.txt.bck $DIR_GAME/motd.txt; fi
 
-  # check for update
+  # Check for update
   if [ `egrep -ic "Success! App '740' fully installed." "$UPDATE_LOG"` -gt 0 ] || [ `egrep -ic "Success! App '740' already up to date" "$UPDATE_LOG"` -gt 0 ]
   then
     echo "$SCREEN_NAME updated successfully"
@@ -171,7 +204,7 @@ function update {
     fi
   fi
   
-  # send e-mail
+  # Send e-mail
   if [ ! -z "$UPDATE_EMAIL" ]; then cat $UPDATE_LOG | mail -s "$SCREEN_NAME update for $(hostname -f)" $UPDATE_EMAIL; fi
   
   if [ $relaunch = 1 ]
@@ -185,10 +218,109 @@ function update {
   fi
 }
 
+function create {
+  # IP should never exist: RFC 5735 TEST-NET-2
+  if [ "$IP" = "198.51.100.0" ]
+  then
+    echo "ERROR: You must configure the script before you create a server."
+    exit 1
+  fi
+  
+  # If steamcmd already exists just install the server
+  if [ -e "$DIR_STEAMCMD/steamcmd.sh" ]
+  then
+    echo "steamcmd already exists..."
+    echo "Installing/Updating $SCREEN_NAME"
+    update
+    return
+  fi
+  
+  # Install steamcmd in the specified directory 
+  if [ ! -d "$DIR_STEAMCMD" ]
+  then
+    echo "$DIR_STEAMCMD does not exist, creating..."
+    if [ `whoami` = "root" ]
+    then
+      su - $USER -c "mkdir -p $DIR_STEAMCMD"
+    else
+      mkdir -p $DIR_STEAMCMD
+    fi
+    if [ ! -d "$DIR_STEAMCMD" ]
+    then
+      echo "ERROR: Could not create $DIR_STEAMCMD"
+      exit 1
+    fi
+  fi 
+
+  # Download steamcmd
+  echo "Downloading steamcmd from http://media.steampowered.com/client/steamcmd_linux.tar.gz"
+  if [ `whoami` = "root" ]
+  then
+    su - $USER -c "cd $DIR_STEAMCMD ; wget http://media.steampowered.com/client/steamcmd_linux.tar.gz"
+  else
+    cd $DIR_STEAMCMD ; wget http://media.steampowered.com/client/steamcmd_linux.tar.gz
+  fi
+  if [ "$?" -ne "0" ]
+  then
+    echo "ERROR: Unable to download steamcmd"
+    exit 1
+  fi
+  
+  # Extract it
+  echo "Extracting and removing the archive"
+  if [ `whoami` = "root" ]
+  then
+    su - $USER -c "cd $DIR_STEAMCMD ; tar xzvf ./steamcmd_linux.tar.gz"
+    su - $USER -c "cd $DIR_STEAMCMD ; rm ./steamcmd_linux.tar.gz"
+  else
+    cd $DIR_STEAMCMD ; tar xzvf ./steamcmd_linux.tar.gz
+    cd $DIR_STEAMCMD ; rm ./steamcmd_linux.tar.gz
+  fi
+  
+  # Did it install?
+  if [ ! -e "$DIR_STEAMCMD/steamcmd.sh" ]
+  then
+    echo "ERROR: Failed to install steamcmd"
+    exit 1
+  fi
+  
+  # Run steamcmd for the first time to update it, telling it to quit when it is done
+  echo "Updating steamcmd"
+  if [ `whoami` = "root" ]
+  then
+  su - $USER -c "echo quit | $DIR_STEAMCMD/steamcmd.sh"
+  else
+    echo quit | $DIR_STEAMCMD/steamcmd.sh
+  fi
+  
+  # Done installing steamcmd, install the server
+  echo "Done installing steamcmd. Installing the game"
+  echo "This will take a while"
+  update
+}
+
 function usage {
-  echo "Usage: $0 {start|stop|status|restart|console|update}"
+  echo "Usage: service csgo-server-launcher {start|stop|status|restart|console|update|create}"
   echo "On console, press CTRL+A then D to stop the screen without stopping the server."
 }
+
+### BEGIN ###
+
+# Read config file
+if [ ! -f "$CONFIG_FILE" ]
+then
+  echo "ERROR: Config file $CONFIG_FILE not found..."
+  exit 1
+else
+  source "$CONFIG_FILE"
+fi
+
+# Check required packages
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+if [ ! -x `which awk` ]; then echo "ERROR: You need awk for this script (try apt-get install awk)"; exit 1; fi
+if [ ! -x `which screen` ]; then echo "ERROR: You need screen for this script (try apt-get install screen)"; exit 1; fi
+if [ ! -x `which wget` ]; then echo "ERROR: You need wget for this script (try apt-get install wget)"; exit 1; fi
+if [ ! -x `which tar` ]; then echo "ERROR: You need tar for this script (try apt-get install tar)"; exit 1; fi
 
 case "$1" in
 
@@ -231,6 +363,11 @@ case "$1" in
     echo "Updating $SCREEN_NAME..."
     update
   ;;
+  
+  create)
+    echo "Creating $SCREEN_NAME..."
+    create
+  ;;
 
   *)
     usage
@@ -240,5 +377,4 @@ case "$1" in
 esac
 
 exit 0
-
 
