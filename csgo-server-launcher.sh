@@ -300,7 +300,8 @@ function create {
 }
 
 function usage {
-  echo "Usage: service csgo-server-launcher {start|stop|status|restart|console|update|create}"
+  echo "Usage: csgo-server-launcher {start|stop|status|restart|console|update|create}"
+  echo "Optional Usage: csgo-server-launcher start {Casual|Breakout|Bloodhound|Vanguard|Competitive|Arms|Demolition}"
   echo "On console, press CTRL+A then D to stop the screen without stopping the server."
 }
 
