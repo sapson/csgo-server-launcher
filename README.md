@@ -23,7 +23,7 @@ $ wget https://raw.githubusercontent.com/sapson/csgo-server-launcher/master/csgo
 $ chmod +x csgo-server-launcher.sh
 ```
 
-Before running the script, you must change some vars in the config file ``/etc/csgo-server-launcher/csgo-server-launcher.conf``.
+Before running the script, you must change some vars in the config file ``csgo-server-launcher.conf``.
 
 * **SCREEN_NAME** - The screen name, you can put what you want but it must be unique and must contain only alphanumeric character.
 * **USER** - Name of the user who started the server.
@@ -55,13 +55,13 @@ Before running the script, you must change some vars in the config file ``/etc/c
 * **PARAM_START** - Launch settings server.
 * **PARAM_UPDATE** - Update settings server.
 
-If you change the location of the config file, do not forget to change the path in the csgo-server-launcher script file for the CONFIG_FILE var (default ``/etc/csgo-server-launcher/csgo-server-launcher.conf``).
+If you change the location of the config file, do not forget to change the path in the csgo-server-launcher script file for the CONFIG_FILE var (default ``csgo-server-launcher.conf``).
 
 ## Usage
 
-For the console mod, press CTRL+A then D to stop the screen without stopping the server.
+For the console mode, press CTRL+A then D to stop the screen without stopping the server.
 
-* **start** - Start the server with the PARAM_START var in a screen.
+* **start** - Start the server with the in a screen.
 * **stop** - Stop the server and close the screen loaded.
 * **status** - Display the status of the server (screen down or up)
 * **restart** - Restart the server (stop && start)
@@ -69,18 +69,11 @@ For the console mod, press CTRL+A then D to stop the screen without stopping the
 * **update** - Update the server based on the PARAM_UPDATE then save the log file in LOG_DIR and send an e-mail to LOG_EMAIL if the var is filled.
 * **create** - Create a server (script must be configured first).
 
-Example : ``service csgo-server-launcher start``
+Example : ``csgo-server-launcher start``
 
-## Automatic update with cron
+To override the default game setting from csgo-server-launcher.conf give an optional parameter to start
 
-You can automatically update your game server by calling the script in a crontab.
-Just add this line in your crontab and change the folder if necessary.
-
-```console
-0 4 * * * cd /etc/init.d/csgo-server-launcher update >/dev/null 2>&1
-```
-
-This will update your server every day at 4 am.
+Example : ``csgo-server-launcher start Bloodhound``
 
 ## License
 
